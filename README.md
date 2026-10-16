@@ -8,6 +8,19 @@ Custom Codex skills by Elliot Shohet.
 | --- | --- |
 | [task-cost](skills/task-cost/SKILL.md) | Report recorded Codex usage and estimated credits by task, model, and linked subagent. |
 | [setup-osx](skills/setup-osx/SKILL.md) | Reproduce the shared macOS Terminal profile, zsh, tmux, and developer-tool setup across Macs. |
+| [use-repo-agents](skills/use-repo-agents/SKILL.md) | Install or update the shared AGENTS.md as global or project-specific Codex instructions. |
+
+## Shared agent instructions
+
+[AGENTS.md](AGENTS.md) contains the shared working agreements for delegation, worktrees, model selection, verification, and communication. It is published from the reference configuration and can be synchronized across computers with `use-repo-agents`.
+
+Copy `skills/use-repo-agents` into your Codex skills directory, then ask:
+
+```text
+$use-repo-agents Install the repository's AGENTS.md as my global Codex instructions.
+```
+
+The skill fetches a specific commit from this public repository, previews the change, backs up existing instructions, and verifies the installed copy. Global installation uses `${CODEX_HOME:-$HOME/.codex}/AGENTS.md`; project scope must be requested explicitly. Existing overrides are reported and preserved. Start a new Codex session afterward to load the installed guidance.
 
 ## Install task-cost
 
@@ -44,6 +57,7 @@ Run the synthetic tests without reading your own session history:
 ```sh
 python3 -m unittest discover -s skills/task-cost/scripts -p 'test_*.py' -v
 python3 -m unittest discover -s skills/setup-osx/scripts -p 'test_*.py' -v
+python3 -m unittest discover -s skills/use-repo-agents/scripts -p 'test_*.py' -v
 ```
 
 Keep each skill under `skills/<name>/` with its `SKILL.md` and required supporting files. Do not commit session logs, usage reports, credentials, or local databases.
