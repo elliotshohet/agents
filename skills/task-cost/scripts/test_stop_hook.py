@@ -119,9 +119,11 @@ class HookTests(unittest.TestCase):
         with patch.dict(os.environ, {'CODEX_HOME': ''}), patch.object(sys, 'stdin', io.StringIO(json.dumps(self.input))), patch.object(stop_hook, 'handle', return_value={}) as handler, contextlib.redirect_stdout(io.StringIO()):
             stop_hook.main()
             self.assertEqual(handler.call_args.args[1], Path('~/.codex').expanduser())
-        with patch.dict(os.environ, {'CODEX_HOME': ''}), patch.object(sys, 'argv', ['install_hook.py']), patch.object(install_hook, 'install', return_value=(Path('/unused'), False, None)) as installer, contextlib.redirect_stdout(io.StringIO()):
-            install_hook.main()
-            self.assertEqual(installer.call_args.args[0], Path('~/.codex').expanduser().resolve())
+        with patch.dict(os.environ, {'CODEX_HOME': '', 'HOME': str(self.home)}), patch.object(sys, 'argv', ['install_hook.py']), patch('subprocess.call', return_value=0) as installer:
+            self.assertEqual(install_hook.main(), 0)
+            command = installer.call_args.args[0]
+            self.assertEqual(command[command.index('--codex-home') + 1], str(self.home / '.codex'))
+            self.assertFalse((self.home / '.codex' / 'hooks.json').exists())
 
     def test_unsupported_usage_unavailable(self):
         self.root.write_text(json.dumps(event('session_meta', {'id': 'root'})) + '\n' + json.dumps(event('event_msg', {'type': 'token_count', 'info': {'other': {}}})) + '\n')

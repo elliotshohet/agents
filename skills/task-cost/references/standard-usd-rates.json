@@ -1,0 +1,100 @@
+{
+  "currency": "USD",
+  "billing_mode": "api_equivalent",
+  "verified_at": "2026-10-16",
+  "source": "https://developers.openai.com/api/docs/pricing",
+  "scope": "Estimated API-equivalent model-token cost. Standard processing, no regional premium by default; per-request long-context rates apply above 272000 input tokens. Excludes separately metered tools and actual ChatGPT subscription charges.",
+  "models": {
+    "gpt-6-astra": {
+      "input": 10,
+      "cached_input": 1,
+      "cache_write_input": 12.5,
+      "output": 50,
+      "long_context_threshold": 272000,
+      "long_context": {
+        "input": 20,
+        "cached_input": 2,
+        "cache_write_input": 25.0,
+        "output": 75.0
+      }
+    },
+    "gpt-6.1-sol": {
+      "input": 2,
+      "cached_input": 0.1,
+      "cache_write_input": 2.5,
+      "output": 10,
+      "long_context_threshold": 272000,
+      "long_context": {
+        "input": 4,
+        "cached_input": 0.2,
+        "cache_write_input": 5.0,
+        "output": 15.0
+      }
+    },
+    "gpt-6-sol": {
+      "input": 2,
+      "cached_input": 0.2,
+      "cache_write_input": 2.5,
+      "output": 10,
+      "long_context_threshold": 272000,
+      "long_context": {
+        "input": 4,
+        "cached_input": 0.4,
+        "cache_write_input": 5.0,
+        "output": 15.0
+      }
+    },
+    "gpt-6-luna": {
+      "input": 0.1,
+      "cached_input": 0.01,
+      "cache_write_input": 0.125,
+      "output": 0.5,
+      "long_context_threshold": 272000,
+      "long_context": {
+        "input": 0.2,
+        "cached_input": 0.02,
+        "cache_write_input": 0.25,
+        "output": 0.75
+      }
+    },
+    "gpt-5.6-sol": {
+      "input": 4,
+      "cached_input": 0.4,
+      "cache_write_input": 5,
+      "output": 20,
+      "long_context_threshold": 272000,
+      "long_context": {
+        "input": 8,
+        "cached_input": 0.8,
+        "cache_write_input": 10,
+        "output": 30.0
+      }
+    },
+    "gpt-5.6-terra": {
+      "input": 2,
+      "cached_input": 0.2,
+      "cache_write_input": 2.5,
+      "output": 12,
+      "long_context_threshold": 272000,
+      "long_context": {
+        "input": 4,
+        "cached_input": 0.4,
+        "cache_write_input": 5.0,
+        "output": 18.0
+      }
+    },
+    "gpt-5.6-luna": {
+      "input": 0.2,
+      "cached_input": 0.02,
+      "cache_write_input": 0.25,
+      "output": 1.2,
+      "long_context_threshold": 272000,
+      "long_context": {
+        "input": 0.4,
+        "cached_input": 0.04,
+        "cache_write_input": 0.5,
+        "output": 1.7999999999999998
+      }
+    }
+  }
+}

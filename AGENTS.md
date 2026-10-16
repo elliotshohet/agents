@@ -52,8 +52,8 @@ For command questions, lead with the exact command or shortcut. For completed ac
 
 Email and LinkedIn review requests authorize reading and summarizing. Sending, posting, applying, or modifying accounts requires explicit instruction. Put the items needing attention first.
 
-# Usage percentage footer
+# Task cost estimates
 
-Before the final response for each task, use the task-cost skill's `scripts/usage_percent.py` helper to read the latest recorded Codex primary allowance-window usage for the current thread. Append only the percentage on its own final line, for example `33%` or `33.5%`, with no label, table, dollar amount, or token breakdown unless requested. This is the account's used percentage within the primary quota window, including other concurrent work; do not describe it as this task's consumption or context-window usage.
+The task-cost hooks report raw estimated USD amounts after tool use and at task completion. Use the packaged Standard API-equivalent model pricing by default unless the user specifies another applicable rate card. Include recorded input, cached input, cache writes, output, and proven linked subagent usage; reasoning is already included in output. Do not ask for a purchased-credit conversion for this API-equivalent estimate.
 
-Use only a verified current-thread snapshot with a valid, unexpired window. Never infer a percentage from token counts, credits, subscription price, or account balance. If the helper returns unavailable, omit the numeric footer and briefly say usage percentage is unavailable. Do not ask for USD pricing or credit conversions.
+Use `hooks/task-cost/install.py` to install or update the hooks when requested. The hooks show a raw amount such as `$0.42` and save detailed assumptions and coverage locally. Repeated updates replace the same task's cumulative report; never add them together as separate costs. Unknown models or missing usage remain unavailable, not zero. Separately billed tools require their own usage and prices. Do not append the old account usage-percentage footer automatically.

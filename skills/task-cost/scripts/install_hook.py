@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge the task-cost Stop hook into Codex hooks.json; never modify hook trust."""
+"""Legacy installer API; the command now delegates to repository USD hooks."""
 import argparse
 from datetime import datetime, timezone
 import json
@@ -42,20 +42,21 @@ def install(home, skill_dir):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--codex-home', type=Path, default=Path((os.environ.get('CODEX_HOME') or '~/.codex')).expanduser())
-    parser.add_argument('--skill-dir', type=Path, help='Stable installed skill directory (default: CODEX_HOME/skills/task-cost)')
+    # The standalone skill no longer installs the obsolete credit-only hook.
+    import subprocess
+    parser = argparse.ArgumentParser(description='Install the repository USD hooks (legacy command).')
+    parser.add_argument('--codex-home', type=Path, default=Path(os.environ.get('CODEX_HOME') or '~/.codex').expanduser())
+    parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[3])
+    parser.add_argument('--rates', type=Path)
     args = parser.parse_args()
-    home = args.codex_home.expanduser().resolve()
-    try:
-        target, changed, backup = install(home, (args.skill_dir or home / 'skills' / 'task-cost').expanduser())
-    except (OSError, ValueError, TypeError) as exc:
-        parser.exit(1, f'Cannot install task-cost hook: {exc}\n')
-    print(f"{'Configured' if changed else 'Already configured'}: {target}")
-    if backup:
-        print(f'Backup: {backup}')
-    print('Open /hooks in Codex to review and trust this hook. No trust records were changed. Reload/start a session if needed.')
+    installer = args.repo.expanduser().resolve() / 'hooks' / 'task-cost' / 'install.py'
+    if not installer.is_file():
+        parser.error('Use a checkout of elliotshohet/agents: python3 hooks/task-cost/install.py (or pass --repo /path/to/agents).')
+    command = [sys.executable, str(installer), '--codex-home', str(args.codex_home)]
+    if args.rates:
+        command.extend(['--rates', str(args.rates)])
+    return subprocess.call(command)
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

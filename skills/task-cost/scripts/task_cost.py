@@ -40,14 +40,27 @@ def load_rates(path):
     for model, rates in data["models"].items():
         if not isinstance(model, str) or not isinstance(rates, dict):
             raise ValueError("each exact model ID must map to a rate object")
-        for name, value in rates.items():
-            if name in ("input", "cached_input", "output", "cache_write_input"):
-                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
-                    raise ValueError(f"invalid nonnegative finite rate: {model}.{name}")
+        bands = [(model, rates)]
+        if "long_context" in rates or "long_context_threshold" in rates:
+            threshold = rates.get("long_context_threshold")
+            if counter(threshold) is None or threshold == 0:
+                raise ValueError(f"long_context_threshold must be a positive integer: {model}")
+            if not isinstance(rates.get("long_context"), dict):
+                raise ValueError(f"long_context must be a rate object: {model}")
+            bands.append((f"{model}.long_context", rates["long_context"]))
+        for band_name, band in bands:
+            for name, value in band.items():
+                if name in ("input", "cached_input", "output", "cache_write_input"):
+                    try:
+                        valid = not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value) and value >= 0
+                    except OverflowError:
+                        valid = False
+                    if not valid:
+                        raise ValueError(f"invalid nonnegative finite rate: {band_name}.{name}")
     return data
 
 
-def price(usage, model, rates):
+def price(usage, model, rates, request_input_tokens=None):
     if model == "unknown":
         return None, "model unavailable"
     if not rates:
@@ -58,6 +71,14 @@ def price(usage, model, rates):
     inp, cached, out = (usage.get(k) for k in ("input_tokens", "cached_input_tokens", "output_tokens"))
     if inp is None or cached is None or out is None:
         return None, "missing input, cache, or output counter"
+    if "long_context_threshold" in card:
+        # A delta can cover several requests. A small delta proves all are in
+        # the base band; a large one proves a single long request only when
+        # the last request accounts for the complete input delta.
+        if inp > card["long_context_threshold"]:
+            if counter(request_input_tokens) != inp:
+                return None, "context band ambiguous: snapshot may cover multiple requests"
+            card = card["long_context"]
     writes = usage.get("cache_write_input_tokens")
     reasoning = usage.get("reasoning_output_tokens")
     if reasoning is not None and reasoning > out:
@@ -191,7 +212,9 @@ def build_report(paths, rates=None, turn=None, since=None, until=None):
                 row["usage_events"] += 1
                 for name, amount in usage.items():
                     row["usage"][name] = None if amount is None or row["usage"][name] is None else row["usage"][name] + amount
-                value, reason = price(usage, model, rates)
+                last_usage = info.get("last_token_usage")
+                request_input = last_usage.get("input_tokens") if isinstance(last_usage, dict) else None
+                value, reason = price(usage, model, rates, request_input_tokens=request_input)
                 known_total = usage["input_tokens"] + usage["output_tokens"] if usage["input_tokens"] is not None and usage["output_tokens"] is not None else None
                 if known_total is None:
                     row["unknown_usage_events"] += 1

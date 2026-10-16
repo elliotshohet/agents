@@ -1,0 +1,7 @@
+{
+  "description": "Template only: run install.py to copy a stable runtime and merge absolute commands into CODEX_HOME/hooks.json. Estimates recorded model usage, not actual billed amounts.",
+  "hooks": {
+    "PostToolUse": [{"hooks": [{"type": "command", "command": "python3 \"${CODEX_HOME:-$HOME/.codex}/hooks/task-cost/hook.py\"", "timeout": 30, "statusMessage": "Estimating task cost"}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "python3 \"${CODEX_HOME:-$HOME/.codex}/hooks/task-cost/hook.py\"", "timeout": 30, "statusMessage": "Estimating task cost"}]}]
+  }
+}

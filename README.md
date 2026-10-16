@@ -38,25 +38,19 @@ $task-cost Show the cost of this thread by task.
 
 The helpers use Python 3's standard library and read local Codex session metadata. Automatic session resolution currently supports the `state_5.sqlite` index; explicit rollout paths can be supplied when that index is unavailable. Reports distinguish estimates from actual billed charges and disclose incomplete usage coverage. The bundled rate card is dated; consult its official source for current rates.
 
-### Task-end usage percentage footer
+## USD cost hooks
 
-The shared `AGENTS.md` instructs Codex to append only a raw usage percentage such as `33%` at the end of each task. The helper reads the current thread's latest recorded primary Codex allowance-window snapshot; this is account window usage, including concurrent work. Missing or expired snapshots are reported as unavailable. No dollar conversion is needed.
-
-```sh
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/task-cost/scripts/usage_percent.py"
-```
-
-### Optional automatic hook reports
-
-After installing the skill, register its Codex `Stop` hook:
+[hooks/task-cost](hooks/task-cost) contains the automatic USD estimator and installer:
 
 ```sh
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/task-cost/scripts/install_hook.py"
+python3 hooks/task-cost/install.py
 ```
 
-Start a new Codex session and use `/hooks` to review and trust the task-cost entry. Codex requires this review before new hooks run; the installer preserves existing hooks and notification settings. See the [official hook documentation](https://learn.chatgpt.com/docs/hooks).
+It installs a stable runtime and merges `PostToolUse` plus `Stop` handlers into your Codex hooks. Open `/hooks` in a new Codex session to review and trust the entries. Each tool call refreshes the current task's cumulative estimate; the final Stop refresh covers completed turns, including turns without tools. The hook UI shows only a dollar amount such as `$0.42`. Repeated refreshes are updates to one task, not separate costs to add together.
 
-The hook runs after each completed main-agent turn, using that turn's identity and proven subagent links. It saves private JSON and Markdown reports under `${CODEX_HOME:-$HOME/.codex}/task-cost/reports/` and shows a concise provisional estimate in the hook status. It makes no model or external API calls. Missing usage is reported as unavailable; delayed final token records can make the estimate incomplete. Disable the entry in `/hooks` to stop automatic reporting.
+Default prices use the packaged [Standard USD rate card](skills/task-cost/references/standard-usd-rates.json), including per-model input/cache/output and long-context pricing. Supply another complete applicable USD card with `python3 hooks/task-cost/install.py --rates /absolute/rates.json` or set `TASK_COST_RATES` when running Codex. Unknown models or missing counters show `unavailable`, never an invented zero.
+
+Estimates cover recorded model tokens and proven linked subagents. They are API-equivalent estimates, not subscription charges or invoices; separately billed tools, voice, images, infrastructure, and external APIs require their own usage records. Detailed assumptions and coverage remain in private `${CODEX_HOME:-$HOME/.codex}/task-cost/reports/` files. No logs, credentials, or account balances are published. See [pricing assumptions](skills/task-cost/references/pricing.md) and the [official hook contract](https://learn.chatgpt.com/docs/hooks). Disable entries in `/hooks` to stop reporting.
 
 ## Install setup-osx
 
@@ -80,6 +74,7 @@ Run the synthetic tests without reading your own session history:
 
 ```sh
 python3 -m unittest discover -s skills/task-cost/scripts -p 'test_*.py' -v
+python3 -m unittest discover -s hooks/task-cost -p 'test_*.py' -v
 python3 -m unittest discover -s skills/setup-osx/scripts -p 'test_*.py' -v
 python3 -m unittest discover -s skills/use-repo-agents/scripts -p 'test_*.py' -v
 ```

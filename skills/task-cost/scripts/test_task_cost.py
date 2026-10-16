@@ -170,6 +170,80 @@ class CostTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cost.load_rates(path)
 
+    def context_rates(self):
+        card = self.rates["models"]["m1"]
+        card["long_context_threshold"] = 272000
+        card["long_context"] = {"input": 20, "cached_input": 2,
+                                "cache_write_input": 30, "output": 30}
+        return self.rates
+
+    def test_context_threshold_boundary_prices_whole_request(self):
+        rates = self.context_rates()
+        for inp, expected in [(272000, (271970*10 + 20 + 150 + 200)/1e6),
+                              (272001, (271971*20 + 40 + 300 + 300)/1e6)]:
+            report = self.report([context(), usage(inp=inp, writes=10)], rates=rates)
+            self.assertAlmostEqual(report["totals"]["estimate"], expected)
+
+    def test_mixed_short_and_long_requests_in_same_row(self):
+        rates = self.context_rates()
+        second = usage(inp=272101, cached=40, writes=20, out=20, reasoning=10)
+        second["payload"]["info"]["last_token_usage"] = dict(second["payload"]["info"]["last_token_usage"])
+        second["payload"]["info"]["last_token_usage"]["input_tokens"] = 272001
+        report = self.report([context(), usage(writes=10), second], rates=rates)
+        self.assertEqual(report["totals"]["priced_events"], 2)
+        self.assertAlmostEqual(report["totals"]["estimate"],
+                               (70*10 + 20 + 150 + 200 + 271971*20 + 40 + 300 + 300)/1e6)
+
+    def test_cumulative_total_crossing_threshold_keeps_small_delta_short(self):
+        rates = self.context_rates()
+        # Even missing last-request data is sufficient when each delta is small.
+        second = usage(inp=272100, cached=40, out=20, reasoning=10)
+        second["payload"]["info"].pop("last_token_usage")
+        report = self.report([context(), usage(inp=272000), second], rates=rates)
+        self.assertAlmostEqual(report["totals"]["estimate"],
+                               ((272100-40)*10 + 40 + 20*20)/1e6)
+
+    def test_large_aggregated_snapshot_context_band_is_unpriced(self):
+        rates = self.context_rates()
+        for last in ({"input_tokens": 100}, {}, None, {"input_tokens": True}):
+            snapshot = usage(inp=300000)
+            snapshot["payload"]["info"]["last_token_usage"] = last
+            report = self.report([context(), snapshot], rates=rates)
+            self.assertIsNone(report["totals"]["estimate"])
+            self.assertIn("context band ambiguous", report["rows"][0]["unpriced_reasons"][0])
+
+    def test_invalid_context_cards_rejected(self):
+        path = Path(self.temp.name) / "rates.json"
+        for threshold in (None, 0, -1, True, 272000.0, "272000"):
+            rates = self.context_rates()
+            rates["models"]["m1"]["long_context_threshold"] = threshold
+            path.write_text(json.dumps(rates))
+            with self.assertRaises(ValueError):
+                cost.load_rates(path)
+        for nested in (None, [], 10, {"input": -1}, {"output": float("inf")},
+                       {"cached_input": True}, {"cache_write_input": "30"},
+                       {"input": 10**1000}):
+            rates = self.context_rates()
+            rates["models"]["m1"]["long_context"] = nested
+            path.write_text(json.dumps(rates))
+            with self.assertRaises(ValueError):
+                cost.load_rates(path)
+        rates = self.context_rates()
+        del rates["models"]["m1"]["long_context"]
+        path.write_text(json.dumps(rates))
+        with self.assertRaises(ValueError):
+            cost.load_rates(path)
+
+    def test_context_card_roundtrip_and_missing_nested_rate_not_base_fallback(self):
+        rates = self.context_rates()
+        path = Path(self.temp.name) / "rates.json"
+        path.write_text(json.dumps(rates))
+        self.assertEqual(cost.load_rates(path), rates)
+        del rates["models"]["m1"]["long_context"]["output"]
+        report = self.report([context(), usage(inp=272001)], rates=rates)
+        self.assertIsNone(report["totals"]["estimate"])
+        self.assertEqual(report["rows"][0]["unpriced_reasons"], ["missing rates: output"])
+
 
 if __name__ == "__main__":
     unittest.main()

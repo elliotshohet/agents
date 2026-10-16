@@ -1,6 +1,6 @@
 ---
 name: task-cost
-description: Report Codex usage and estimated cost by task, turn, model, and subagent from local session records. Use when the user asks what work cost, requests a task cost breakdown, asks for a cost summary after development work, wants automatic usage reporting after each task, or wants a usage percentage footer.
+description: Report Codex usage and estimated cost by task, turn, model, and subagent from local session records. Use when the user asks what work cost, requests a task cost breakdown, asks for a cost summary after development work, wants automatic USD estimates, or requests a usage percentage explicitly.
 ---
 
 # Task Cost
@@ -18,9 +18,9 @@ Report recorded token usage and a clearly labeled cost estimate for the requeste
 
 ## Calculate
 
-Run `python3 scripts/task_cost.py --session /absolute/rollout.jsonl --rates references/standard-credit-rates.json`, adding other proven subagent sessions and task filters as needed. Add `--json` for structured output.
+Run `python3 scripts/task_cost.py --session /absolute/rollout.jsonl --rates references/standard-usd-rates.json`, adding other proven subagent sessions and task filters as needed. Add `--json` for structured output.
 
-The packaged rate card is a dated snapshot of official Standard Codex credit rates. See [pricing guidance](references/pricing.md) before interpreting costs or supplying another rate card.
+The default packaged rate card is a dated snapshot of official Standard API-equivalent USD prices. Use the credit rate card only when credits are requested. See [pricing guidance](references/pricing.md) before interpreting costs or supplying another rate card.
 
 - Deduplicate cumulative usage snapshots; never add cumulative totals together.
 - Cached input is part of input. Reasoning output is part of output. Do not charge either twice.
@@ -31,34 +31,16 @@ The packaged rate card is a dated snapshot of official Standard Codex credit rat
 
 ## Present
 
-Use a concise table: task, model, input tokens, cached input tokens, output tokens, estimated credits or cost. Include a priced subtotal and an explicit count of unpriced or unattributed rows. Aggregate related subagent rows into the parent task only when root-turn linkage is proven.
+By default, use `--usd-only` and show only a raw USD amount such as `$0.42`. For a requested breakdown, use a concise table: task, model, input tokens, cached input tokens, output tokens, estimated credits or cost. Include a priced subtotal and an explicit count of unpriced or unattributed rows. Aggregate related subagent rows into the parent task only when root-turn linkage is proven.
 
-End with a short basis line naming the rate-card date, Standard-speed assumption, last recorded usage timestamp, and material coverage gaps. Show `actual billed amount: unavailable` unless an authoritative task-scoped billing record is supplied. Do not convert credits to USD without a verified applicable purchase rate.
+For a detailed breakdown, end with a short basis line naming the rate-card date, Standard-speed assumption, last recorded usage timestamp, and material coverage gaps. Show `actual billed amount: unavailable` unless an authoritative task-scoped billing record is supplied. Do not convert credits to USD without a verified applicable purchase rate.
 
 For an ongoing cost footer requested by the user, report only the scoped task's recorded usage and label it provisional. Do not change billing settings, expose account balances, or print message bodies to produce a report.
 
-## Automatic reporting after each task
+## Automatic USD hooks
 
-When the user authorizes automatic reporting, install the skill at a stable path, then run:
+The repository's `hooks/task-cost/` package is the automatic-reporting entrypoint. From a checkout of `elliotshohet/agents`, run `python3 hooks/task-cost/install.py`. It installs a self-contained runtime under `${CODEX_HOME:-$HOME/.codex}/hooks/task-cost/`, backs up and merges existing hook configuration, and registers `PostToolUse` refreshes plus a final `Stop` refresh. Review the exact new entries in `/hooks` before enabling them. Existing unrelated hooks, notifications, and settings are preserved; do not fabricate trust hashes.
 
-```sh
-python3 "${CODEX_HOME:-$HOME/.codex}/skills/task-cost/scripts/install_hook.py"
-```
+The hook reads explicit session/turn identity, verifies the root transcript, and includes proven indexed descendants. Repeated calls recompute the same task's cumulative estimate; they are not additional charges. It shows only `$0.42` when the supplied-file estimate is fully priced, or `unavailable` for missing or unpriced data. Private JSON and Markdown reports retain the assumptions, included models, rate-card date, and coverage notes. It ignores tool inputs/results and message bodies, never blocks or continues the model, and makes no network/model calls.
 
-The installer merges one command into `${CODEX_HOME:-$HOME/.codex}/hooks.json`, preserves existing hooks and other keys, and makes a private timestamped backup before changing an existing file. Repeating the same installation adds no duplicate. `--codex-home PATH` and `--skill-dir PATH` support explicit locations; use a persistent installed skill directory, never a temporary worktree. It does not edit `config.toml`, notifications, billing, or hook trust records.
-
-Open `/hooks` in Codex to review and trust the exact new hook; reload or start a session if the client has not discovered it. New or changed non-managed hooks are skipped until trusted. Never manufacture trust hashes or bypass this review. Local command hooks require a client that supports them and enabled hooks; this setup does not configure unsupported cloud-orchestrated clients. See the [official hook contract](https://learn.chatgpt.com/docs/hooks).
-
-The `Stop` handler reads the hook's explicit `session_id`, `turn_id`, and `transcript_path`, verifies transcript identity, and resolves only indexed spawn descendants. It reports the selected turn and descendants with matching `root_turn_id`; it never guesses the latest session. Missing identity or unavailable/unsupported counters produce an explicit unavailable result, never a zero-cost inference. A Stop is a completed assistant turn, so a multi-turn task produces separate reports. Interrupted turns do not emit Stop reports.
-
-Each run atomically saves JSON and Markdown under `${CODEX_HOME:-$HOME/.codex}/task-cost/reports/`, with private report permissions. Filenames are a deterministic hash of the session and turn, so a repeated Stop refreshes that turn's report. Reports contain usage metadata and coverage notes, never message bodies. The hook emits only a concise UI `systemMessage`; it makes no model/API calls and never requests continuation or blocks another hook. It does not embed the footer inside the assistant's final message.
-
-Automatic estimates use the packaged dated Standard-speed credit rates and retain all pricing caveats above. They cover recorded usage through the displayed timestamp; delayed final usage, missing descendants, unknown models, and tools with separate charges remain limitations. Review the saved report for coverage notes; actual billed amount remains unavailable.
-
-Verify changes with `python3 -m unittest discover -s scripts -p 'test_*.py'` from the skill directory. Tests use temporary homes and never modify live hooks or trust.
-
-## Minimal usage percentage footer
-
-For the user's default task-end footer, run `python3 scripts/usage_percent.py` from this skill directory (or use its absolute path). It resolves `CODEX_THREAD_ID` and reads only the root thread's latest Codex quota snapshot. `--thread ID`, `--codex-home PATH`, and `--session PATH` support explicit selection. Never select the most recently modified session or print message bodies or account balances.
-
-Append successful output verbatim as the final line of the response, such as `33%` or `33.5%`, without a label or breakdown. This is the account primary allowance-window percentage used as of the latest recorded snapshot, including concurrent work; it is not a task-specific percentage or context-window occupancy. The current response may not yet be reflected. The helper rejects missing, invalid, stale, or expired snapshots with `unavailable` and a nonzero exit. In that case, briefly report unavailability instead of inventing a percentage. No USD rate or credit conversion is needed. Detailed token/cost reports remain available when requested; the percentage footer takes precedence over the detailed presentation for automatic task-end reporting.
+Use the packaged Standard USD card unless otherwise specified. A complete USD JSON override can be supplied with `--rates PATH` during installation or hook invocation, or `TASK_COST_RATES` at runtime. Never treat USD estimates as actual ChatGPT bills or infer costs for separately metered services without records. Usage snapshots can lag tool completion; even the final refresh may omit delayed usage. The former percentage footer is no longer automatic; `scripts/usage_percent.py` remains available for explicit account-usage requests.
