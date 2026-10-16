@@ -1,6 +1,6 @@
 interface:
   display_name: "Use Repository AGENTS.md"
   short_description: "Sync shared Codex instructions from the skills repo"
-  default_prompt: "Use $use-repo-agents to install the shared AGENTS.md from elliotshohet/skills as my global Codex instructions."
+  default_prompt: "Use $use-repo-agents to install the shared AGENTS.md from elliotshohet/agents as my global Codex instructions."
 policy:
   allow_implicit_invocation: true

@@ -1,6 +1,10 @@
-# Codex Skills
+# Agents
 
-Custom Codex skills by Elliot Shohet.
+Shared Codex instructions, skills, and task hooks by Elliot Shohet.
+
+```sh
+git clone https://github.com/elliotshohet/agents.git
+```
 
 ## Skills
 
@@ -33,6 +37,18 @@ $task-cost Show the cost of this thread by task.
 ```
 
 The helpers use Python 3's standard library and read local Codex session metadata. Automatic session resolution currently supports the `state_5.sqlite` index; explicit rollout paths can be supplied when that index is unavailable. Reports distinguish estimates from actual billed charges and disclose incomplete usage coverage. The bundled rate card is dated; consult its official source for current rates.
+
+### Automatic reports after each task
+
+After installing the skill, register its Codex `Stop` hook:
+
+```sh
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/task-cost/scripts/install_hook.py"
+```
+
+Start a new Codex session and use `/hooks` to review and trust the task-cost entry. Codex requires this review before new hooks run; the installer preserves existing hooks and notification settings. See the [official hook documentation](https://learn.chatgpt.com/docs/hooks).
+
+The hook runs after each completed main-agent turn, using that turn's identity and proven subagent links. It saves private JSON and Markdown reports under `${CODEX_HOME:-$HOME/.codex}/task-cost/reports/` and shows a concise provisional estimate in the hook status. It makes no model or external API calls. Missing usage is reported as unavailable; delayed final token records can make the estimate incomplete. Disable the entry in `/hooks` to stop automatic reporting.
 
 ## Install setup-osx
 

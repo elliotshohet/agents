@@ -1,6 +1,6 @@
 ---
 name: task-cost
-description: Report Codex usage and estimated cost by task, turn, model, and subagent from local session records. Use when the user asks what work cost, requests a task cost breakdown, or asks for a cost summary after development work.
+description: Report Codex usage and estimated cost by task, turn, model, and subagent from local session records. Use when the user asks what work cost, requests a task cost breakdown, asks for a cost summary after development work, or wants automatic usage reporting after each task.
 ---
 
 # Task Cost
@@ -35,4 +35,24 @@ Use a concise table: task, model, input tokens, cached input tokens, output toke
 
 End with a short basis line naming the rate-card date, Standard-speed assumption, last recorded usage timestamp, and material coverage gaps. Show `actual billed amount: unavailable` unless an authoritative task-scoped billing record is supplied. Do not convert credits to USD without a verified applicable purchase rate.
 
-For an ongoing cost footer requested by the user, report only the scoped task's recorded usage and label it provisional. Do not install hooks, change billing settings, expose account balances, or print message bodies to produce a report.
+For an ongoing cost footer requested by the user, report only the scoped task's recorded usage and label it provisional. Do not change billing settings, expose account balances, or print message bodies to produce a report.
+
+## Automatic reporting after each task
+
+When the user authorizes automatic reporting, install the skill at a stable path, then run:
+
+```sh
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/task-cost/scripts/install_hook.py"
+```
+
+The installer merges one command into `${CODEX_HOME:-$HOME/.codex}/hooks.json`, preserves existing hooks and other keys, and makes a private timestamped backup before changing an existing file. Repeating the same installation adds no duplicate. `--codex-home PATH` and `--skill-dir PATH` support explicit locations; use a persistent installed skill directory, never a temporary worktree. It does not edit `config.toml`, notifications, billing, or hook trust records.
+
+Open `/hooks` in Codex to review and trust the exact new hook; reload or start a session if the client has not discovered it. New or changed non-managed hooks are skipped until trusted. Never manufacture trust hashes or bypass this review. Local command hooks require a client that supports them and enabled hooks; this setup does not configure unsupported cloud-orchestrated clients. See the [official hook contract](https://learn.chatgpt.com/docs/hooks).
+
+The `Stop` handler reads the hook's explicit `session_id`, `turn_id`, and `transcript_path`, verifies transcript identity, and resolves only indexed spawn descendants. It reports the selected turn and descendants with matching `root_turn_id`; it never guesses the latest session. Missing identity or unavailable/unsupported counters produce an explicit unavailable result, never a zero-cost inference. A Stop is a completed assistant turn, so a multi-turn task produces separate reports. Interrupted turns do not emit Stop reports.
+
+Each run atomically saves JSON and Markdown under `${CODEX_HOME:-$HOME/.codex}/task-cost/reports/`, with private report permissions. Filenames are a deterministic hash of the session and turn, so a repeated Stop refreshes that turn's report. Reports contain usage metadata and coverage notes, never message bodies. The hook emits only a concise UI `systemMessage`; it makes no model/API calls and never requests continuation or blocks another hook. It does not embed the footer inside the assistant's final message.
+
+Automatic estimates use the packaged dated Standard-speed credit rates and retain all pricing caveats above. They cover recorded usage through the displayed timestamp; delayed final usage, missing descendants, unknown models, and tools with separate charges remain limitations. Review the saved report for coverage notes; actual billed amount remains unavailable.
+
+Verify changes with `python3 -m unittest discover -s scripts -p 'test_*.py'` from the skill directory. Tests use temporary homes and never modify live hooks or trust.

@@ -1,11 +1,11 @@
 ---
 name: use-repo-agents
-description: Install or update the shared AGENTS.md from elliotshohet/skills as global Codex instructions or in an explicitly selected project. Use to synchronize the repository's working agreements across computers.
+description: Install or update the shared AGENTS.md from elliotshohet/agents as global Codex instructions or in an explicitly selected project. Use to synchronize the repository's working agreements across computers.
 ---
 
 # Use Repository Agent Instructions
 
-Use `AGENTS.md` at the root of `https://github.com/elliotshohet/skills` as the canonical shared working agreements. Fetch and inspect that file, then install an exact, backed-up copy at the requested scope. Do not publish local custom instructions or replace the source with another repository without an explicit request.
+Use `AGENTS.md` at the root of `https://github.com/elliotshohet/agents` as the canonical shared working agreements. Fetch and inspect that file, then install an exact, backed-up copy at the requested scope. Do not publish local custom instructions or replace the source with another repository without an explicit request.
 
 ## Choose the scope
 
@@ -20,7 +20,7 @@ Fetch the public repository into a new temporary directory without altering an e
 ```sh
 shared_agents_repo=$(mktemp -d)
 git -C "$shared_agents_repo" init --quiet
-git -C "$shared_agents_repo" fetch --depth=1 https://github.com/elliotshohet/skills.git main
+git -C "$shared_agents_repo" fetch --depth=1 https://github.com/elliotshohet/agents.git main
 shared_agents_revision=$(git -C "$shared_agents_repo" rev-parse FETCH_HEAD)
 git -C "$shared_agents_repo" show "${shared_agents_revision}:AGENTS.md" > "$shared_agents_repo/AGENTS.md"
 ```
