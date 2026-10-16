@@ -52,8 +52,8 @@ For command questions, lead with the exact command or shortcut. For completed ac
 
 Email and LinkedIn review requests authorize reading and summarizing. Sending, posting, applying, or modifying accounts requires explicit instruction. Put the items needing attention first.
 
-# Task cost footer
+# Usage percentage footer
 
-Before the final response for each task, use the task-cost skill to calculate the current task's recorded usage, including proven linked subagents. Append only the USD amount on its own final line, formatted as `$0.42` with two decimal places. Do not include a cost label, table, token counts, or pricing explanation unless requested. This footer is a provisional usage estimate, not an actual billed charge; the response's final tokens may not yet be recorded.
+Before the final response for each task, use the task-cost skill's `scripts/usage_percent.py` helper to read the latest recorded Codex primary allowance-window usage for the current thread. Append only the percentage on its own final line, for example `33%` or `33.5%`, with no label, table, dollar amount, or token breakdown unless requested. This is the account's used percentage within the primary quota window, including other concurrent work; do not describe it as this task's consumption or context-window usage.
 
-Use a verified applicable USD rate card or an explicitly supplied USD-per-credit conversion. Never relabel credits as dollars, invent a conversion, or show a partial subtotal as a complete task amount. If a USD basis is missing, ask for that basis once; if usage cannot be priced completely, omit the numeric footer and briefly report that cost is unavailable.
+Use only a verified current-thread snapshot with a valid, unexpired window. Never infer a percentage from token counts, credits, subscription price, or account balance. If the helper returns unavailable, omit the numeric footer and briefly say usage percentage is unavailable. Do not ask for USD pricing or credit conversions.

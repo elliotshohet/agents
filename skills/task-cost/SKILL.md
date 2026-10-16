@@ -1,6 +1,6 @@
 ---
 name: task-cost
-description: Report Codex usage and estimated cost by task, turn, model, and subagent from local session records. Use when the user asks what work cost, requests a task cost breakdown, asks for a cost summary after development work, or wants automatic usage reporting after each task.
+description: Report Codex usage and estimated cost by task, turn, model, and subagent from local session records. Use when the user asks what work cost, requests a task cost breakdown, asks for a cost summary after development work, wants automatic usage reporting after each task, or wants a usage percentage footer.
 ---
 
 # Task Cost
@@ -57,6 +57,8 @@ Automatic estimates use the packaged dated Standard-speed credit rates and retai
 
 Verify changes with `python3 -m unittest discover -s scripts -p 'test_*.py'` from the skill directory. Tests use temporary homes and never modify live hooks or trust.
 
-## Minimal USD footer
+## Minimal usage percentage footer
 
-When the user wants only a dollar number, use the reporter's `--usd-only` mode instead of the detailed presentation above. For a verified USD card, pass `--rates PATH`; for credit rates, also pass an explicitly supplied `--usd-per-credit VALUE`. Never infer that conversion from subscription price or invent one. Append the successful output as the final line of the response, for example `$0.42`, with no label or table. This is a provisional estimate of recorded task usage. Missing rates or incomplete pricing return `unavailable` with a nonzero status; do not replace that with zero or a partial subtotal.
+For the user's default task-end footer, run `python3 scripts/usage_percent.py` from this skill directory (or use its absolute path). It resolves `CODEX_THREAD_ID` and reads only the root thread's latest Codex quota snapshot. `--thread ID`, `--codex-home PATH`, and `--session PATH` support explicit selection. Never select the most recently modified session or print message bodies or account balances.
+
+Append successful output verbatim as the final line of the response, such as `33%` or `33.5%`, without a label or breakdown. This is the account primary allowance-window percentage used as of the latest recorded snapshot, including concurrent work; it is not a task-specific percentage or context-window occupancy. The current response may not yet be reflected. The helper rejects missing, invalid, stale, or expired snapshots with `unavailable` and a nonzero exit. In that case, briefly report unavailability instead of inventing a percentage. No USD rate or credit conversion is needed. Detailed token/cost reports remain available when requested; the percentage footer takes precedence over the detailed presentation for automatic task-end reporting.
