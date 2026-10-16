@@ -1,0 +1,14 @@
+{
+  "profile_name": "Midnight Bloom",
+  "nvm_version": "v0.40.8",
+  "node_version": "v24.22.0",
+  "codex_version": "0.163.0",
+  "scm_breeze_revision": "b57798bded91bfbf497842b943f3124a19d9b24b",
+  "brew_formulae": ["git", "tmux", "zsh-autosuggestions", "ripgrep", "gh"],
+  "observed_versions": {
+    "tmux": "3.7c",
+    "zsh-autosuggestions": "0.7.1"
+  },
+  "baseline_date": "2026-10-16",
+  "version_policy": "Pin nvm, Node, Codex, and SCM Breeze. Homebrew formulae and macOS components use supported target-machine versions; report drift explicitly."
+}

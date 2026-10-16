@@ -1,0 +1,6 @@
+interface:
+  display_name: "Set Up macOS"
+  short_description: "Reproduce a consistent terminal setup across Macs"
+  default_prompt: "Use $setup-osx to install and configure this Mac to match the shared terminal baseline, then verify it."
+policy:
+  allow_implicit_invocation: true
