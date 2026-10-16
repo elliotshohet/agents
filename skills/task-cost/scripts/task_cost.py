@@ -249,6 +249,32 @@ def render_text(report):
     return "\n".join(lines)
 
 
+def positive_finite(value):
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError("USD per credit must be a positive finite number")
+    if not math.isfinite(result) or result <= 0:
+        raise argparse.ArgumentTypeError("USD per credit must be a positive finite number")
+    return result
+
+
+def render_usd(report, usd_per_credit=None):
+    """Return a complete scoped estimate only; never substitute a subtotal."""
+    value = report['totals']['estimate']
+    if not report['coverage_complete'] or value is None:
+        return 'unavailable'
+    if report['currency'] == 'credits':
+        if usd_per_credit is None:
+            return 'unavailable'
+        value *= positive_finite(usd_per_credit)
+    elif report['currency'] != 'USD':
+        return 'unavailable'
+    if not math.isfinite(value) or value < 0:
+        return 'unavailable'
+    return f"${value:.2f}"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--session", action="append", required=True, help="Explicit rollout JSONL path; repeat for scoped subagents")
@@ -256,8 +282,13 @@ def main(argv=None):
     parser.add_argument("--since", help="Inclusive timezone-aware ISO timestamp (snapshot time)")
     parser.add_argument("--until", help="Inclusive timezone-aware ISO timestamp (snapshot time)")
     parser.add_argument("--rates", help="Verified exact-model rates JSON, per million tokens")
-    parser.add_argument("--json", action="store_true")
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument("--json", action="store_true")
+    output.add_argument("--usd-only", action="store_true", help="Print only a USD estimate, or unavailable with a nonzero exit")
+    parser.add_argument("--usd-per-credit", type=positive_finite, help="Explicit applicable USD conversion per credit; no default assumed")
     args = parser.parse_args(argv)
+    if args.usd_per_credit is not None and not args.usd_only:
+        parser.error("--usd-per-credit requires --usd-only")
     since, until = timestamp(args.since), timestamp(args.until)
     if args.since and since is None or args.until and until is None:
         parser.error("time bounds must be ISO timestamps with timezone")
@@ -266,7 +297,14 @@ def main(argv=None):
     try:
         report = build_report(args.session, load_rates(args.rates), args.turn, since, until)
     except (OSError, ValueError, TypeError) as exc:
+        if args.usd_only:
+            print("unavailable")
+            return 1
         parser.exit(2, f"task_cost: {exc}\n")
+    if args.usd_only:
+        value = render_usd(report, args.usd_per_credit)
+        print(value)
+        return 1 if value == "unavailable" else 0
     print(json.dumps(report, indent=2, allow_nan=False) if args.json else render_text(report))
     return 0
 

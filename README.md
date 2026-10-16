@@ -38,7 +38,11 @@ $task-cost Show the cost of this thread by task.
 
 The helpers use Python 3's standard library and read local Codex session metadata. Automatic session resolution currently supports the `state_5.sqlite` index; explicit rollout paths can be supplied when that index is unavailable. Reports distinguish estimates from actual billed charges and disclose incomplete usage coverage. The bundled rate card is dated; consult its official source for current rates.
 
-### Automatic reports after each task
+### Task-end USD footer
+
+The shared `AGENTS.md` instructs Codex to use `task-cost` before each task’s final response and append only a USD amount such as `$0.42`. A verified USD rate card or an explicitly provided USD-per-credit conversion is required. This is a provisional estimate of recorded usage, not an invoice.
+
+### Optional automatic hook reports
 
 After installing the skill, register its Codex `Stop` hook:
 

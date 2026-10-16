@@ -1,3 +1,5 @@
+import contextlib
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -106,6 +108,60 @@ class CostTests(unittest.TestCase):
         report = self.report([context(at="2026-10-16T08:00:00Z"), usage(), context(), usage(inp=150, cached=30, out=20)])
         self.assertEqual(report["rows"][0]["usage"]["input_tokens"], 50)
         self.assertTrue(report["warnings"])
+
+    def test_usd_only_direct_and_explicit_credit_conversion(self):
+        report = self.report([context(), usage(inp=40000, cached=0, out=1000, reasoning=0)])
+        self.assertEqual(cost.render_usd(report), '$0.42')
+        self.rates.update(currency='credits', billing_mode='codex_credits')
+        credits = self.report([context(), usage(inp=40000, cached=0, out=1000, reasoning=0)])
+        self.assertEqual(cost.render_usd(credits), 'unavailable')
+        self.assertEqual(cost.render_usd(credits, 2), '$0.84')
+
+    def test_usd_only_never_formats_partial_or_unknown_as_total(self):
+        for entries, kwargs in [([context(), usage(), '{bad'], {}),
+                                ([context(), usage()], {'rates': None}),
+                                ([context(), usage()], {'turn': 'missing'}),
+                                ([context(), usage(), context('t2', 'unknown'), usage(inp=200, out=20)], {})]:
+            self.assertEqual(cost.render_usd(self.report(entries, **kwargs)), 'unavailable')
+
+    def test_invalid_usd_conversion_rejected(self):
+        for value in ('0', '-1', 'nan', 'inf', 'not-a-rate'):
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+                cost.main(['--session', '/unused', '--usd-only', '--usd-per-credit', value])
+            self.assertEqual(raised.exception.code, 2)
+
+    def test_usd_cli_exclusive_and_unavailable_exit(self):
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+            cost.main(['--session', '/unused', '--usd-only', '--json'])
+        self.assertEqual(raised.exception.code, 2)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = cost.main(['--session', str(Path(self.temp.name) / 'missing'), '--usd-only'])
+        self.assertNotEqual(code, 0)
+        self.assertEqual(output.getvalue(), 'unavailable\n')
+
+    def test_usd_cli_formats_complete_report_only(self):
+        self.report([context(), usage(inp=40000, cached=0, out=1000, reasoning=0)])
+        rates = Path(self.temp.name) / 'rates.json'
+        rates.write_text(json.dumps(self.rates))
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = cost.main(['--session', str(Path(self.temp.name) / 'session.jsonl'), '--rates', str(rates), '--usd-only'])
+        self.assertEqual(code, 0)
+        self.assertEqual(output.getvalue(), '$0.42\n')
+
+    def test_credit_cli_requires_explicit_conversion(self):
+        self.rates.update(currency='credits', billing_mode='codex_credits')
+        self.report([context(), usage(inp=40000, cached=0, out=1000, reasoning=0)])
+        rates = Path(self.temp.name) / 'rates.json'
+        rates.write_text(json.dumps(self.rates))
+        args = ['--session', str(Path(self.temp.name) / 'session.jsonl'), '--rates', str(rates), '--usd-only']
+        for extra, expected, status in [([], 'unavailable\n', 1), (['--usd-per-credit', '2'], '$0.84\n', 0)]:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = cost.main(args + extra)
+            self.assertEqual(code, status)
+            self.assertEqual(output.getvalue(), expected)
 
     def test_bad_rate_rejected(self):
         path = Path(self.temp.name) / "rates.json"

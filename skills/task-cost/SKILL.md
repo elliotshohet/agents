@@ -56,3 +56,7 @@ Each run atomically saves JSON and Markdown under `${CODEX_HOME:-$HOME/.codex}/t
 Automatic estimates use the packaged dated Standard-speed credit rates and retain all pricing caveats above. They cover recorded usage through the displayed timestamp; delayed final usage, missing descendants, unknown models, and tools with separate charges remain limitations. Review the saved report for coverage notes; actual billed amount remains unavailable.
 
 Verify changes with `python3 -m unittest discover -s scripts -p 'test_*.py'` from the skill directory. Tests use temporary homes and never modify live hooks or trust.
+
+## Minimal USD footer
+
+When the user wants only a dollar number, use the reporter's `--usd-only` mode instead of the detailed presentation above. For a verified USD card, pass `--rates PATH`; for credit rates, also pass an explicitly supplied `--usd-per-credit VALUE`. Never infer that conversion from subscription price or invent one. Append the successful output as the final line of the response, for example `$0.42`, with no label or table. This is a provisional estimate of recorded task usage. Missing rates or incomplete pricing return `unavailable` with a nonzero status; do not replace that with zero or a partial subtotal.
