@@ -1,0 +1,6 @@
+interface:
+  display_name: "Task Cost"
+  short_description: "Report Codex token usage and cost estimates by task"
+  default_prompt: "Use $task-cost to show recorded usage and estimated cost for the work in this thread, broken down by task and model."
+policy:
+  allow_implicit_invocation: true
